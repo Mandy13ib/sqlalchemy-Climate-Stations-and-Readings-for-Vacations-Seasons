@@ -6,16 +6,21 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 from flask import Flask, jsonify
+
 # Database Setup
 engine = create_engine("sqlite:///hawaii.sqlite")
 # reflect an existing database into a new model
 Base = automap_base()
 # reflect the tables
 Base.prepare(engine, reflect=True)
+
 # Save reference to the table
-Measurement = Base.classes.measurement
+Measurement = Base.classes.Measurement
+#Station = Base.clases.station
+
 # Create an app, being sure to pass __name__
 app = Flask(__name__)
+
 # Define what to do when a user hits the index route
 @app.route("/")
 def welcome():
@@ -26,8 +31,12 @@ def welcome():
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
         f"/api/v1.0/start_date/<start><br/>"
-        f"/api/v1.0/startend/<start>/<end>"
+        f"Use YYYY-MM-DD date format to choose a start date, but do not exceed 2017-08-23.<br/>"
+        f"/api/v1.0/<start>/<end><br/>"
+        f"Use YYYY-MM-DD date format to choose start date/end date.<br/>"
+        f"Do not exceed 2017-08-23 for a start date, and do not preceed 2010-01-01 for an end date."
     )
+
 # Define what to do when a user hits the /api/v1.0/precipitation
 @app.route("/api/v1.0/precipitation")
 def precipitation():
@@ -35,14 +44,16 @@ def precipitation():
     session = Session(engine)
     # Calculated the date 1 year ago from the last data point in the database
     #last_date = session.query(Measurement.date).\
-        #order_by(Measurement.date.desc()).first()
-    query_date = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+    #order_by(Measurement.date.desc()).first()
+    query_date = [Measurement.date, Measurement.prcp] #dt.date(2017, 8, 23) - dt.timedelta(days=365)
     """Return a list of all prcp names."""
     # Performed a query to retrieve the data and precipitation scores
     last_twelve = session.query(Measurement.date, Measurement.prcp).\
         filter(Measurement.date >= query_date).\
         order_by(Measurement.date.desc()).all()
+           
     session.close()
+
     # Convert list of tuples into normal list
     all_prcp = []
     for date, prcp in last_twelve:
@@ -50,6 +61,8 @@ def precipitation():
         prcp_dict[date] = prcp
         all_prcp.append(prcp_dict)
     return jsonify(all_prcp)
+
+
 # Define what to do when a user hits the /api/v1.0/stations
 @app.route("/api/v1.0/stations")
 def stations():
@@ -63,6 +76,7 @@ def stations():
     # Convert list of tuples into normal list
     all_station = list(np.ravel(results))
     return jsonify(all_station)
+
 # Define what to do when a user hits the /api/v1.0/tobs
 @app.route("/api/v1.0/tobs")
 def tobs():
@@ -70,7 +84,7 @@ def tobs():
     session = Session(engine)
     # Get date one year from tobs
     #max_tobs_last_date = session.query(Measurement.date).\
-        #order_by(Measurement.date.desc()).first()
+    #order_by(Measurement.date.desc()).first()
     query_date = dt.date(2017, 8 ,18) - dt.timedelta(days=365)
     # Get tobs and date from a year ago
     results = session.query(Measurement.date, Measurement.tobs).\
@@ -84,6 +98,7 @@ def tobs():
         tobs_dict[date] = tobs
         all_tobs.append(tobs_dict)
     return jsonify(all_tobs)
+
 # Define what to do when a user hits the /api/v1.0/start_date/<start>
 @app.route("/api/v1.0/start_date/<start>")
 def start_date(start):
@@ -102,6 +117,7 @@ def start_date(start):
         temp_dict["MAX TOBS"] = max_tobs
         t_normals.append(temp_dict)
     return jsonify(t_normals)
+
 # Define what to do when a user hits the /api/v1.0/startend/<start>/<end>
 @app.route("/api/v1.0/startend/<start>/<end>")
 def startend(start,end):
@@ -120,6 +136,8 @@ def startend(start,end):
         temp_dict["AVG TOBS"] = avg_tobs
         temp_dict["MAX TOBS"] = max_tobs
         t_normals.append(temp_dict)
+        
     return jsonify(t_normals)
+
 if __name__ == '__main__':
     app.run(debug=True)
