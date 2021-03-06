@@ -7,21 +7,23 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 from flask import Flask, jsonify
 
-# Database Setup
+# setting up the Database
 engine = create_engine("sqlite:///hawaii.sqlite")
+
 # reflect an existing database into a new model
 Base = automap_base()
+
 # reflect the tables
 Base.prepare(engine, reflect=True)
 
-# Save reference to the table
+# Save info intoa table
 Measurement = Base.classes.measurement
 Station = Base.clases.station
 
-# Create an app, being sure to pass __name__
+# Create an app
 app = Flask(__name__)
 
-# Define what to do when a user hits the index route
+# Define what to do when when the inof hits index route
 @app.route("/")
 def welcome():
     """List all available api routes."""
@@ -40,21 +42,21 @@ def welcome():
 # Define what to do when a user hits the /api/v1.0/precipitation
 @app.route("/api/v1.0/precipitation")
 def precipitation():
+    
     # Create our session (link) from Python to the DB
     session = Session(engine)
-    # Calculated the date 1 year ago from the last data point in the database
-    #last_date = session.query(Measurement.date).\
-    #order_by(Measurement.date.desc()).first()
+    
+    # Calculated the  1 year ago date from the last data point in the database
     query_date = [(Measurement.date, Measurement.prcp] #dt.date(2017, 8, 23) - dt.timedelta(days=365)
     """Return a list of all prcp names."""
-    # Performed a query to retrieve the data and precipitation scores
+                   
+    # Performed a query to pull the data and precipitation scores
     last_twelve = session.query(Measurement.date, Measurement.prcp).\
         filter(Measurement.date >= query_date).\
         order_by(Measurement.date.desc()).all()
-           
-
     session.close()
-    # Convert list of tuples into normal list
+                   
+    # Convert list of the tuples into a normal list
     all_prcp = []
     for date, prcp in last_twelve:
         prcp_dict = {}
@@ -62,17 +64,19 @@ def precipitation():
         all_prcp.append(prcp_dict)
     return jsonify(all_prcp)
 
-
-# Define what to do when a user hits the /api/v1.0/stations
+# Define what to do when a user reaches the /api/v1.0/stations
 @app.route("/api/v1.0/stations")
 def stations():
+                   
     # Create our session (link) from Python to the DB
     session = Session(engine)
+                   
     # Get a list of stations
     results = session.query(Measurement.station).\
         group_by(Measurement.station).\
         order_by(func.count(Measurement.station).desc()).all()
     session.close()
+                   
     # Convert list of tuples into normal list
     all_station = list(np.ravel(results))
     return jsonify(all_station)
@@ -80,17 +84,19 @@ def stations():
 # Define what to do when a user hits the /api/v1.0/tobs
 @app.route("/api/v1.0/tobs")
 def tobs():
+                   
     # Create our session (link) from Python to the DB
     session = Session(engine)
+                   
     # Get date one year from tobs
-    #max_tobs_last_date = session.query(Measurement.date).\
-        #order_by(Measurement.date.desc()).first()
     query_date = dt.date(2017, 8 ,18) - dt.timedelta(days=365)
+                   
     # Get tobs and date from a year ago
     results = session.query(Measurement.date, Measurement.tobs).\
         filter(Measurement.date >= query_date).\
         order_by(Measurement.date.desc()).all()
     session.close()
+                   
     # Convert list of tuples into normal list
     all_tobs = []
     for date, tobs in results:
@@ -99,15 +105,18 @@ def tobs():
         all_tobs.append(tobs_dict)
     return jsonify(all_tobs)
 
-# Define what to do when a user hits the /api/v1.0/start_date/<start>
+# Define what to do when a user gets to the /api/v1.0/start_date/<start>
 @app.route("/api/v1.0/start_date/<start>")
 def start_date(start):
+                   
     # Create our session (link) from Python to the DB
     session = Session(engine)
+                   
     # When given the start only, calculate `TMIN`, `TAVG`, and `TMAX` for all dates greater than and equal to the start date
     results = session.query(func.min(Measurement.tobs),func.avg(Measurement.tobs),func.max(Measurement.tobs)).\
         filter(Measurement.date >= start)
     session.close()
+                   
      # Create a dictionary from the row data and append to a list of all_temp_normals
     t_normals = []
     for min_tobs, avg_tobs, max_tobs in results:
@@ -118,16 +127,19 @@ def start_date(start):
         t_normals.append(temp_dict)
     return jsonify(t_normals)
 
-# Define what to do when a user hits the /api/v1.0/startend/<start>/<end>
+# Define what to do when a user reaches the /api/v1.0/startend/<start>/<end>
 @app.route("/api/v1.0/startend/<start>/<end>")
 def startend(start,end):
-    # Create our session (link) from Python to the DB
+                   
+    # Create our link from Python to the DB
     session = Session(engine)
+                   
     # When given the start only, calculate `TMIN`, `TAVG`, and `TMAX` for all dates greater than and equal to the start date
     results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
         filter(Measurement.date >= start).\
         filter(Measurement.date <= end).all()
     session.close()
+                   
     # Create a dictionary from the row data and append to a list of all_temp_normals
     t_normals = []
     for min_tobs, avg_tobs, max_tobs in results:
@@ -136,8 +148,8 @@ def startend(start,end):
         temp_dict["AVG TOBS"] = avg_tobs
         temp_dict["MAX TOBS"] = max_tobs
         t_normals.append(temp_dict)
-        
     return jsonify(t_normals)
+                   
 # custom date range route
 @app.route('/api/v1.0/start_end/<start>/<end>')
 def custom_range(start,end):
@@ -148,13 +160,16 @@ def custom_range(start,end):
     print("Server received request for 'Custom_Range' page...")
     data = session.query(func.min(Measurement.tobs),func.avg(Measurement.tobs),func.max(Measurement.tobs)).\
         filter(Measurement.date >= start).filter(Measurement.date<=end).all()
+                   
     #close session for next query
     session.close()
-    # retrieve data
-    #dict to retrun from
+                   
+    # retrieve data into a dict 
     t_normals = []
+                   
     # loop to retrieve data
     for min_tobs, avg_tobs, max_tobs in data:
+                   
         #dict for each iteration
         tobs_dict = {}
         tobs_dict["MIN TOBS"] = min_tobs
