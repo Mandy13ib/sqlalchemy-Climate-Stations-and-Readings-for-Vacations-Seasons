@@ -15,8 +15,8 @@ Base = automap_base()
 Base.prepare(engine, reflect=True)
 
 # Save reference to the table
-Measurement = Base.classes.Measurement
-#Station = Base.clases.station
+Measurement = Base.classes.measurement
+Station = Base.clases.station
 
 # Create an app, being sure to pass __name__
 app = Flask(__name__)
@@ -45,15 +45,15 @@ def precipitation():
     # Calculated the date 1 year ago from the last data point in the database
     #last_date = session.query(Measurement.date).\
     #order_by(Measurement.date.desc()).first()
-    query_date = [Measurement.date, Measurement.prcp] #dt.date(2017, 8, 23) - dt.timedelta(days=365)
+    query_date = [(Measurement.date, Measurement.prcp] #dt.date(2017, 8, 23) - dt.timedelta(days=365)
     """Return a list of all prcp names."""
     # Performed a query to retrieve the data and precipitation scores
     last_twelve = session.query(Measurement.date, Measurement.prcp).\
         filter(Measurement.date >= query_date).\
         order_by(Measurement.date.desc()).all()
            
-    session.close()
 
+    session.close()
     # Convert list of tuples into normal list
     all_prcp = []
     for date, prcp in last_twelve:
@@ -84,7 +84,7 @@ def tobs():
     session = Session(engine)
     # Get date one year from tobs
     #max_tobs_last_date = session.query(Measurement.date).\
-    #order_by(Measurement.date.desc()).first()
+        #order_by(Measurement.date.desc()).first()
     query_date = dt.date(2017, 8 ,18) - dt.timedelta(days=365)
     # Get tobs and date from a year ago
     results = session.query(Measurement.date, Measurement.tobs).\
@@ -138,6 +138,30 @@ def startend(start,end):
         t_normals.append(temp_dict)
         
     return jsonify(t_normals)
-
+# custom date range route
+@app.route('/api/v1.0/start_end/<start>/<end>')
+def custom_range(start,end):
+    start = dt.datetime.strptime(start, '%Y-%m-%d')
+    end = dt.datetime.strptime(end, '%Y-%m-%d')
+    # create session for API
+    session = Session(engine)
+    print("Server received request for 'Custom_Range' page...")
+    data = session.query(func.min(Measurement.tobs),func.avg(Measurement.tobs),func.max(Measurement.tobs)).\
+        filter(Measurement.date >= start).filter(Measurement.date<=end).all()
+    #close session for next query
+    session.close()
+    # retrieve data
+    #dict to retrun from
+    t_normals = []
+    # loop to retrieve data
+    for min_tobs, avg_tobs, max_tobs in data:
+        #dict for each iteration
+        tobs_dict = {}
+        tobs_dict["MIN TOBS"] = min_tobs
+        tobs_dict["AVG TOBS"] = avg_tobs
+        tobs_dict["MAX TOBS"] = max_tobs
+        t_normals.append(tobs_dict)
+    return jsonify(t_normals)
+                   
 if __name__ == '__main__':
     app.run(debug=True)
